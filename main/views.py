@@ -11,6 +11,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.models import User as AuthUser
 from main.models import Transaction, Customer, PPOBTransaction, ParrentTransaction, TransactionIn, TransferUser, Deposit, MerchantToken, RequestDeposit, PPOBProduct, PPOBProductWrapper
 from django.db.models import Q, Subquery, OuterRef, Count
+from django.db.models.functions import Coalesce
 from main.bot import bot
 from django.db import transaction
 from django.core import management
@@ -188,22 +189,26 @@ def cron(request: HttpRequest):
     this_month = datetime(now.year, now.month, 1, 0, 0, 0, 0, tzinfo = ZoneInfo(settings.TIME_ZONE))
 
     customers = Customer.objects.annotate(
-        count_this_amount = Subquery(
-            ParrentTransaction.objects.filter(
-                customer__pk = OuterRef("pk")
-            ).filter(
-                type = ParrentTransaction.TypeChoices.BURN_TRANSACTION
-            ).filter(
-                time__gte = this_month
-            ).filter(
-                caption = "Iuran Listrik"
-            ).values(
-                'customer'
-            ).annotate(
-                count = Count('pk')
-            ).values('count')[:1]
+        count_this_amount = Coalesce(
+            Subquery(
+                ParrentTransaction.objects
+                    .filter(
+                        customer__pk = OuterRef("pk")
+                    ).filter(
+                        type = ParrentTransaction.TypeChoices.BURN_TRANSACTION
+                    ).filter(
+                        time__gte = this_month
+                    ).filter(
+                        caption = "Iuran Listrik"
+                    ).values(
+                        'customer'
+                    ).annotate(
+                        count = Count('pk')
+                    ).values('count')[:1]
+            ),
+            0
         )
-    ).filter(type = Customer.TypeChoices.USER).filter(pay_daily = True).filter(count_this_amount__lt = MAX_COUNT_MOUNTLY)
+    ).filter(type = Customer.TypeChoices.USER).filter(pay_daily = True).filter(count_this_amount__lt = 20)
 
     with transaction.atomic():
         for customer in customers:
