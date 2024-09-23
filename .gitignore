@@ -1,0 +1,13 @@
+__pycache__
+Env
+\.venv
+node_modules
+tailwind.css
+tailwind.min.css
+package-lock.json
+db.sqlite3
+staticfiles
+.env*
+!.env.example
+session.sqlite3
+*.json

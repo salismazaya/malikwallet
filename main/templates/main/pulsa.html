@@ -1,0 +1,79 @@
+{% extends "main/base.html" %}
+
+{% block title %} Pulsa {% endblock %}
+
+{% block content %}
+<div x-data="data" class="m-5">
+    {% for message in messages %}
+    {% if message.tags == 'error' %}
+    <p class="bg-red-100 border-red-500 text-black p-3 rounded drop-shadow">{{message}}</p>
+    {% else %}
+    <p class="bg-green-100 border-green-500 text-black p-3 rounded drop-shadow">{{message}}</p>
+
+    {% endif %}
+    {% endfor %}
+
+    <template x-if="state == 'all'">
+        <div>
+            <template x-for="w in Object.keys(products)">
+                <button x-on:click="state = 'wrapper'; wrapper = w"
+                    class="mb-2 block w-full p-3 bg-blue-400 drop-shadow-md rounded text-white hover:bg-blue-300">
+                    <p x-text="w" class="text-center"></p>
+                </button>
+            </template>
+        </div>
+    </template>
+
+
+    <template x-if="state == 'wrapper'">
+        <div class="p-5">
+            <p x-text="wrapper" class="text-xl mb-4"></p>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-1">
+                <template x-for="p in products[wrapper]">
+                    <button x-show="p.price > 0" x-on:click="state = 'product'; product = p; product_name = p.name" class="block w-full p-3 bg-blue-400 drop-shadow-md rounded text-white hover:bg-blue-300">
+                        <p class="text-center"><span x-text="p.name"></span> : Rp. <span x-text="p.price"></span></p>
+                    </button>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <template x-if="state == 'product'">
+        <form method="post" class="p-5">
+            {% csrf_token %}
+            <input type="hidden" name="unique" value="{{unique}}">
+            <input type="hidden" name="product" :value="product.id || ''">
+            <p class="text-xl mb-4">
+                Produk: <span x-text="product.name"></span>
+            </p>
+            <p class="text-xl mb-4">
+                Harga: Rp. <span x-text="product.price"></span>
+            </p>
+
+            <input type="text" name="target" required placeholder="Nomor Tujuan" class="outline-none block w-full border border-blue-500 p-2 bg-gray-100 text-lg rounded">
+            <button class="block mx-auto w-full bg-blue-500 p-2 mt-3 text-white text-lg hover:bg-blue-400">Beli</button>
+        </form>
+    </template>
+</div>
+{% endblock %}
+
+{% block js %}
+
+<script>
+    const getUniqueValues = (data, key) => {
+        return [...new Set(data.map(item => item[key]))];
+    };
+
+    function data() {
+        return {
+            loading: false,
+            state: 'all',
+            wrapper: null,
+            product: null,
+            target: null,
+            products: JSON.parse('{{products|safe}}')
+        }
+    }
+</script>
+{% endblock %}
