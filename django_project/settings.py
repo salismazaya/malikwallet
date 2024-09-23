@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'shshshsah9197191299721297hssjhjsh')
 
-FIELD_ENCRYPTION_KEY = b'a50yqQcbhMG287PD-ku_qQxsNFI5jjNXA3yIcqqKSGw='
+FIELD_ENCRYPTION_KEY = os.environ['FIELD_ENCRYPTION_KEY'].encode()
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
