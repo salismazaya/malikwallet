@@ -1,0 +1,23 @@
+{
+  "name": "malikwallet",
+  "version": "0.0.1",
+  "description": "",
+  "scripts": {
+    "start": "granian --interface wsgi django_project.wsgi:application",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tailwindcss -i ./main/static/css/raw_style.css -o ./main/static/css/tailwind.css && cleancss -o ./main/static/css/tailwind.min.css ./main/static/css/tailwind.css ",
+    "build:dev": "tailwindcss -i ./main/static/css/raw_style.css -o ./main/static/css/tailwind.css --watch",
+    "dev": "python manage.py runserver",
+    "mmg": "python manage.py makemigrations",
+    "mg": "python manage.py migrate",
+    "shell": "python manage.py shell",
+    "csu": "python manage.py createsuperuser",
+    "cstatic": "python manage.py collectstatic --no-input"
+  },
+  "author": "Salis Mazaya",
+  "license": "MIT",
+  "dependencies": {
+    "clean-css-cli": "^5.6.1",
+    "tailwindcss": "^3.1.8"
+  }
+}
