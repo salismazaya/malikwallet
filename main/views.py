@@ -318,13 +318,12 @@ def transfer(request: HttpRequest):
     
     amount = int(request.POST['amount2'])
 
-
     customer = Customer.objects.get(user__pk = request.user.pk)
     if customer.balance < amount:
         messages.error(request, 'Saldo tidak cukup')    
         return rv
     
-    if recipient.user.username != "salism3":
+    if not recipient.special_recipient:
         limit = customer.limit_with_extra_limit
         if customer.buy_amount_today + amount > limit:
             messages.error(request, 'Limit terlebihi!')    
@@ -333,12 +332,12 @@ def transfer(request: HttpRequest):
     try:
         TransferUser.objects.create(
             from_customer = customer,
-            to_customer = Customer.objects.get(pk = recipient.pk),
+            to_customer = recipient,
             amount = amount
         )
     except:
-        traceback.print_exc()
         messages.error(request, 'Terjadi error!')    
+        return rv
     
     messages.success(request, f"Sukses mengirim Rp {amount}")
     

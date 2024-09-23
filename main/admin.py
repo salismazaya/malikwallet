@@ -7,7 +7,9 @@ from django.contrib.auth.models import Group as AuthGroup, User as AuthUser
 from django.db.models.query import QuerySet
 # from django.contrib import messages
 from django.http import HttpRequest
-from main.models import Transaction, Customer, ParrentTransaction, PPOBTransaction, TransferUser, Deposit, TransactionIn, MerchantToken, RequestDeposit, PPOBProduct, PPOBProductWrapper
+from main.models import Transaction, Customer, ParrentTransaction, PPOBTransaction, \
+    TransferUser, Deposit, TransactionIn, MerchantToken, RequestDeposit, \
+    PPOBProduct, PPOBProductWrapper, ErrorLog
 from django.contrib.auth.admin import UserAdmin as AuthUserAdmin, GroupAdmin as AuthGroupAdmin
 from main.forms import ParrentTransactionAdminForm, TransferUserAdminForm, TransactionMerchantAdminForm
 from django.utils import timezone
@@ -238,6 +240,16 @@ class PPOBProductAdmin(admin.ModelAdmin):
 
     price.short_description = 'Harga'
 
+
+class ErrorLogAdmin(admin.ModelAdmin):
+    list_display = ('id', 'time')
+
+    def has_change_permission(self, request: HttpRequest, obj = None):
+        return False
+    
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
 admin_site = AdminSite()
 admin_site.register(AuthUser, AuthUserAdmin)
 admin_site.register(AuthGroup, AuthGroupAdmin)
@@ -252,3 +264,4 @@ admin_site.register(MerchantToken)
 admin_site.register(RequestDeposit, RequestDepositAdmin)
 admin_site.register(PPOBProduct, PPOBProductAdmin)
 admin_site.register(PPOBProductWrapper, PPOBProductWrapperAdmin)
+admin_site.register(ErrorLog, ErrorLogAdmin)

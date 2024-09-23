@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from encrypted_model_fields.fields import EncryptedCharField
+from encrypted_model_fields.fields import EncryptedCharField, EncryptedTextField
 from django.core.validators import RegexValidator
 from django.utils.crypto import get_random_string
 from main.helpers import digiflazz
@@ -68,24 +68,24 @@ class CustomerManager(models.Manager):
                     .exclude(type = ParrentTransaction.TypeChoices.BURN_TRANSACTION)
                     .exclude(type = ParrentTransaction.TypeChoices.PPOB_TRANSACTION)
                     .annotate(
-                        is_transfer_to_salism3 = models.Exists(
+                        is_transfer_to_special_recipient = models.Exists(
                             TransferUser.objects
-                            .annotate(
-                                transaction_type = models.ExpressionWrapper(models.OuterRef('type'), output_field = models.SmallIntegerField())
-                            )
-                            .annotate(
-                                pk_string = models.functions.Cast(
-                                    models.F('pk'),
-                                    output_field = models.CharField()
+                                .annotate(
+                                    transaction_type = models.ExpressionWrapper(models.OuterRef('type'), output_field = models.SmallIntegerField())
                                 )
-                            )
-                            .filter(pk_string = models.OuterRef('child_transaction_id'))
-                            .filter(transaction_type = ParrentTransaction.TypeChoices.TRANSFER_TRANSACTION)
-                            .filter(to_customer__user__username = 'salism3')[:1]
+                                .annotate(
+                                    pk_string = models.functions.Cast(
+                                        models.F('pk'),
+                                        output_field = models.CharField()
+                                    )
+                                )
+                                .filter(pk_string = models.OuterRef('child_transaction_id'))
+                                .filter(transaction_type = ParrentTransaction.TypeChoices.TRANSFER_TRANSACTION)
+                                .filter(to_customer__special_recipient = True)[:1]
                         )
                     )
                     .exclude(
-                        is_transfer_to_salism3 = True
+                        is_transfer_to_special_recipient = True
                     )
                     .filter(amount__lt = 0)
                     .annotate(kasep = models.functions.Abs('amount'))
@@ -136,6 +136,7 @@ class Customer(models.Model):
     limit_per_day = models.PositiveBigIntegerField(default = 20000, verbose_name = 'Limit Per Hari')
     type = models.PositiveSmallIntegerField(choices = TypeChoices.choices, default = TypeChoices.USER)
     pay_daily = models.BooleanField(default = True, verbose_name = 'Bayar Listrik?')
+    special_recipient = models.BooleanField(default = False, verbose_name = 'Penerima spesial', help_text = 'Saat customer lain mengirim maka si pengirim tidak akan berlaku limit')
     nfc_id = models.CharField(max_length = 50, validators = [
         RegexValidator(regex = r'^[a-fA-F0-9]+$', message = 'Format nfc id tidak valid')
     ], null = True, blank = True)
@@ -375,4 +376,12 @@ class PPOBProduct(models.Model):
 
     def __str__(self):
         return self.name
+
+
+
+class ErrorLog(models.Model):
+    class Meta:
+        verbose_name = verbose_name_plural = "Log Error"
     
+    error = EncryptedTextField()
+    time = models.DateTimeField(default = timezone.now)
