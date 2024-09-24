@@ -2,23 +2,25 @@ from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from django.http import HttpRequest, Http404, HttpResponse
+from django.http import HttpRequest, Http404, HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.models import User as AuthUser
-from main.models import Transaction, Customer, PPOBTransaction, ParrentTransaction, TransactionIn, TransferUser, Deposit, MerchantToken, RequestDeposit, PPOBProduct, PPOBProductWrapper
+from main.models import Transaction, Customer, PPOBTransaction, ParrentTransaction, \
+    TransactionIn, TransferUser, MerchantToken, RequestDeposit, \
+    PPOBProduct, PPOBProductWrapper
 from django.db.models import Q, Subquery, OuterRef, Count
 from django.db.models.functions import Coalesce
 from main.bot import bot
 from django.db import transaction
 from django.core import management
 from io import BytesIO
-import traceback, json, hashlib, hmac, json
+import traceback, json, hashlib, hmac, json, zlib, time
 from pusher_push_notifications import PushNotifications
-from encrypted_model_fields.fields import encrypt_str
+from encrypted_model_fields.fields import CRYPTER
 from django.utils.crypto import get_random_string
 from main.helpers import digiflazz
 from io import StringIO
@@ -179,14 +181,12 @@ Santri: {obj.customer.user.first_name} {obj.customer.user.last_name}
 
     return redirect('index')
 
-from zoneinfo import ZoneInfo
-
 @transaction.atomic
 def cron(request: HttpRequest):
     MAX_COUNT_MOUNTLY = 20
 
     now = timezone.now()
-    this_month = datetime(now.year, now.month, 1, 0, 0, 0, 0, tzinfo = ZoneInfo(settings.TIME_ZONE))
+    this_month = datetime(now.year, now.month, 1, 0, 0, 0, 0, tzinfo = settings.TIME_ZONE_OBJ)
 
     customers = Customer.objects.annotate(
         count_this_amount = Coalesce(
@@ -208,21 +208,31 @@ def cron(request: HttpRequest):
             ),
             0
         )
-    ).filter(type = Customer.TypeChoices.USER).filter(pay_daily = True).filter(count_this_amount__lt = 20)
+    )\
+    .filter(type = Customer.TypeChoices.USER).filter(pay_daily = True)\
+    .filter(count_this_amount__lt = MAX_COUNT_MOUNTLY)
 
-    with transaction.atomic():
-        for customer in customers:
-            ParrentTransaction.objects.create(
-                customer = customer,
-                amount = -1000,
-                caption = "Iuran Listrik",
-                type = ParrentTransaction.TypeChoices.BURN_TRANSACTION
-            )
-            TransactionIn.objects.create(
-                amount = 1000,
-                caption = f"Iuran listrik {customer.user.first_name} {customer.user.last_name}"
-            )
+    parrent_transactions = []
+    transaction_ins = []
+    for customer in customers:
+        parrent_transaction = ParrentTransaction(
+            customer = customer,
+            amount = -1000,
+            caption = "Iuran Listrik",
+            type = ParrentTransaction.TypeChoices.BURN_TRANSACTION
+        )
+        parrent_transactions.append(parrent_transaction)
+
+        transaction_in = TransactionIn(
+            amount = 1000,
+            caption = f"Iuran listrik {customer.user.first_name} {customer.user.last_name}"
+        )
+        transaction_ins.append(transaction_in)
                
+    with transaction.atomic():
+        # bulk insert executed, signals will not executed
+        ParrentTransaction.objects.bulk_create(parrent_transactions)
+        TransactionIn.objects.bulk_create(transaction_ins)
 
     return HttpResponse('!')
 
@@ -597,8 +607,11 @@ def backup(request: HttpRequest):
     with StringIO() as f:
         management.call_command("dumpdata", stdout = f)
         f.seek(0)
-        data_encrypted = encrypt_str(f.read()).decode('utf-8')
-
-    return HttpResponse(json.dumps({
+        data = f.read().encode()
+        data_compressed = zlib.compress(data)
+        data_encrypted = CRYPTER.encrypt(data_compressed).decode('utf-8')
+        
+    return JsonResponse({
+        'timestamp': int(time.time()),
         'data': data_encrypted
-    }), content_type = "application/json")
+    })
