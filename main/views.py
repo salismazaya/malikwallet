@@ -84,7 +84,8 @@ def index(request: HttpRequest):
             'customer': customer,
             'wali_customer': wali_customer,
             'debug': settings.DEBUG,
-            'extra_limit': extra_limit
+            'extra_limit': extra_limit,
+            'recipient_html': settings.RECIPIENT_HTML
         }
         return render(request, 'main/index.html', context)
 

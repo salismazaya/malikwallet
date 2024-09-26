@@ -5,7 +5,7 @@ pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+BASE_URL = os.environ['BASE_URL']
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -152,10 +152,6 @@ STATIC_ROOT = os.environ.get('STATIC_ROOT', BASE_DIR / 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-PUBLIC_CONTEXT = {
-    'TITLE': 'Malik Wallet'
-}
-
 LOGIN_URL = 'login'
 
 PWA_APP_NAME = 'Malik Wallet'
@@ -204,3 +200,11 @@ CACHEOPS = {
     'auth.user':  {'ops': 'all'},
     'auth.group':  {'ops': 'all'},
 }
+
+PUBLIC_CONTEXT = {
+    'TITLE': 'Malik Wallet',
+    'BEAMS_PUSHER_INSTANCE_ID': BEAMS_PUSHER_INSTANCE_ID,
+    'BASE_URL': BASE_URL
+}
+
+RECIPIENT_HTML = os.environ.get('RECIPIENT_HTML', '')

@@ -1,5 +1,6 @@
 {% load static %}
 {% load pwa %}
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -9,21 +10,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %} | {{ TITLE }}</title>
     <link rel="stylesheet" href="{{ tailwind_css_static }}">
-    <script src="/static/js/alpine.js" defer></script>
+    <script src="{% static 'js/alpine.js' %}" defer></script>
     {% progressive_web_app_meta %}
 
     {% block extra_head %}
 
     {% endblock %}
 
-    <script src="/static/js/push-notifications-cdn.js"></script>
+    <script src="{% static 'js/push-notifications-cdn.js' %}"></script>
 </head>
 
 <body class="bg-gray-100 font-mono">
     {% block content %}
     {% endblock %}
 
-    <script src="/static/js/html5-qrcode.js"></script>
+    <script src="{% static 'js/html5-qrcode.js' %}"></script>
 
     {% block js %}
     {% endblock%}

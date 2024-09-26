@@ -1,10 +1,11 @@
 {% extends "main/base.html" %}
 {% load mathfilters %}
+{% load static %}
 
 {% block title %} Dashboard {% endblock %}
 
 {% block js %}
-<script src="/static/js/flowbite.min.js"></script>
+<script src="{% static 'js/flowbite.min.js' %}"></script>
 <script>
     function onScanSuccess(decodedText, decodedResult) {
         window.location.href = '{% url "pay" merchant_id=0 %}'.replace('0', decodedText);
@@ -33,11 +34,11 @@
 {% if not debug %}
 <script>
     const beamsClient = new PusherPushNotifications.Client({
-        instanceId: '7894397f-072e-4fbe-b847-984112da19c1',
+        instanceId: '{{BEAMS_PUSHER_INSTANCE_ID}}',
     });
 
     const beamsTokenProvider = new PusherPushNotifications.TokenProvider({
-        url: "https://wallet.salism3.dev/beams/",
+        url: "{{BASE_URL}}/beams/",
     });
 
     beamsClient
@@ -50,7 +51,7 @@
 {% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/flowbite.min.css">
+<link rel="stylesheet" href="{% static 'css/flowbite.min.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -72,6 +73,7 @@
 <div class="container mx-auto mt-8">
     <button onclick="Notification.requestPermission()" class="bg-blue-500 rounded text-white p-3 m-5">REQUEST
         NOTIFIKASI</button>
+
     {% for message in messages %}
     {% if message.tags == 'error' %}
     <p class="bg-red-100 border-red-500 text-black p-3 rounded drop-shadow">{{message}}</p>
@@ -85,15 +87,14 @@
         <!-- Balance Card -->
         <div class="bg-white p-6 rounded-lg shadow-lg">
             {% if is_merchant %}
-            <h2 class="text-2xl font-sadmin/login/?next=/admin/emibold mb-4">Saldo Anda</h2>
+            <h2 class="text-2xl font-semibold mb-4">Saldo Anda</h2>
             <p class="text-gray-700 text-3xl font-bold">Rp. {{customer.balance}}</p>
             {% else %}
             <h2 class="text-2xl font-semibold mb-4">Saldo</h2>
             <p class="text-gray-700 text-3xl font-bold">Rp. {{customer.balance}}</p>
             <p class="text-gray-700 font-bold"><span class="text-green-400">Rp.
                     {{customer.buy_amount_today}}</span>/<span class="text-red-500">Rp.
-                    {{customer.limit_with_extra_limit}}</span>{% if extra_limit %}<span class="text-red-500">+Rp.
-                    {{extra_limit}}</span>{% endif %}</p>
+                    {{customer.limit}}</span></p>
             {% endif %}
         </div>
 
@@ -128,10 +129,8 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_fund">
                 <label for="image" class="underline">Tambah Uang</label>
-                <p>DANA/GOPAY: 083154881466</p>
-                <p>SEABANK: 901989393726</p>
-                <p>BRI: 483501050101536</p>
-                <p>A/N SALIS MAZAYA MIFTAH MALIK</p>
+
+                {{ recipient_html|safe }}
 
                 <p class="mt-5">Upload bukti pengiriman</p>
                 <input type="file" id="image" accept="image/*" name="image"
