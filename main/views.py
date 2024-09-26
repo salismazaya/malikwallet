@@ -278,7 +278,7 @@ def pay(request: HttpRequest, merchant_id: int):
         messages.error(request, 'Saldo tidak cukup')    
         return rv
     
-    limit = customer.limit_with_extra_limit
+    limit = customer.limit
     if customer.buy_amount_today + amount > limit:
         messages.error(request, 'Limit terlebihi!')    
         return rv 
@@ -339,7 +339,7 @@ def transfer(request: HttpRequest):
         return rv
     
     if not recipient.special_recipient:
-        limit = customer.limit_with_extra_limit
+        limit = customer.limit
         if customer.buy_amount_today + amount > limit:
             messages.error(request, 'Limit terlebihi!')    
             return rv 
@@ -511,7 +511,7 @@ def get_name(request: HttpRequest):
 
     name = f"{customer.user.first_name} {customer.user.last_name}"[:14].upper()
     balance = customer.balance
-    active_balance = customer.limit_with_extra_limit - customer.buy_amount_today
+    active_balance = customer.limit - customer.buy_amount_today
     if active_balance < 0:
         active_balance = 0
     
@@ -574,7 +574,7 @@ def pay_2(request: HttpRequest):
     if customer.balance < amount:
         return HttpResponse("E_SALDO", status = 403)
     
-    limit = customer.limit_with_extra_limit
+    limit = customer.limit
     if customer.buy_amount_today + amount > limit:
         return HttpResponse("E_LIMIT", status = 403) 
     

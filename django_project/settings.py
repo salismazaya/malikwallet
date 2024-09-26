@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'mathfilters',
     'encrypted_model_fields',
     'corsheaders',
+    'cacheops',
     # 'rangefilter',
 ]
 
@@ -192,3 +193,14 @@ DIGIFLAZZ_SECRET_KEY = os.environ['DIGIFLAZZ_SECRET_KEY']
 
 BEAMS_PUSHER_INSTANCE_ID = os.environ['BEAMS_PUSHER_INSTANCE_ID']
 BEAMS_PUSHER_SECRET_KEY = os.environ['BEAMS_PUSHER_SECRET_KEY']
+
+CACHEOPS_REDIS = os.environ['REDIS_URL']
+CACHEOPS_DEFAULTS = {
+    'timeout': 10 * 60
+}
+
+CACHEOPS = {
+    'main.*':  {'ops': 'all'},
+    'auth.user':  {'ops': 'all'},
+    'auth.group':  {'ops': 'all'},
+}

@@ -43,9 +43,9 @@ class CustomerAdmin(admin.ModelAdmin):
     buy_amount_today.short_description = 'Uang Keluar Hari Ini'
     
     def limit(self, obj):
-        return obj.limit_with_extra_limit
+        return obj.limit
     
-    limit.admin_order_field = 'limit_with_extra_limit'
+    limit.admin_order_field = 'limit'
     
     def has_delete_permission(self, request: HttpRequest, obj: Any | None = ...) -> bool:
         return False

@@ -10,7 +10,7 @@ class ChildTransactionManager(models.Manager):
     def get_queryset(self) -> models.QuerySet:
         q = super().get_queryset().annotate(
             time = models.Subquery(
-                ParrentTransaction.objects.filter(type = self.model.get_child_alias()).filter(child_transaction_id = models.functions.Cast(models.OuterRef('pk'), output_field = models.CharField())).values('time')[:1]
+                ParrentTransaction.objects.filter(type = self.model.get_model_type()).filter(child_transaction_id = models.functions.Cast(models.OuterRef('pk'), output_field = models.CharField())).values('time')[:1]
             )
         )
         return q
@@ -33,8 +33,8 @@ class ChildTransactionModel(models.Model):
         abstract = True
 
     @staticmethod
-    def get_child_alias():
-        raise NotImplementedError(f"get_child_alias from model {__class__} not implemented")
+    def get_model_type():
+        raise NotImplementedError(f"get_model_type from model {__class__} not implemented")
 
     objects = ChildTransactionManager.from_queryset(ChildTransactionQuerySet)()
     original_objects = models.Manager()
@@ -61,54 +61,66 @@ class CustomerManager(models.Manager):
                 output_field = models.DecimalField()
             )
         ).annotate(
-            buy_amount_today = models.functions.Coalesce(
-                models.Subquery(
-                    ParrentTransaction.objects
-                    .filter(customer = models.OuterRef('pk'))
-                    .exclude(type = ParrentTransaction.TypeChoices.BURN_TRANSACTION)
-                    .exclude(type = ParrentTransaction.TypeChoices.PPOB_TRANSACTION)
-                    .annotate(
-                        is_transfer_to_special_recipient = models.Exists(
-                            TransferUser.objects
-                                .annotate(
-                                    transaction_type = models.ExpressionWrapper(models.OuterRef('type'), output_field = models.SmallIntegerField())
-                                )
-                                .annotate(
-                                    pk_string = models.functions.Cast(
-                                        models.F('pk'),
-                                        output_field = models.CharField()
-                                    )
-                                )
-                                .filter(pk_string = models.OuterRef('child_transaction_id'))
-                                .filter(transaction_type = ParrentTransaction.TypeChoices.TRANSFER_TRANSACTION)
-                                .filter(to_customer__special_recipient = True)[:1]
-                        )
-                    )
-                    .exclude(
-                        is_transfer_to_special_recipient = True
-                    )
-                    .filter(amount__lt = 0)
-                    .annotate(kasep = models.functions.Abs('amount'))
-                    .filter(time__gte = day_now)
-                    .values('customer')
-                    .annotate(total_amount = models.Sum('kasep'))
-                    .values('total_amount'),
-                    output_field = models.DecimalField()
+            buy_amount_today = models.Case(
+                models.When(
+                    ~models.Q(type = Customer.TypeChoices.USER),
+                    then = models.Value(0)
                 ),
-                0,
-                output_field = models.DecimalField()
+                default = models.functions.Coalesce(
+                    models.Subquery(
+                        ParrentTransaction.objects
+                            .filter(customer = models.OuterRef('pk'))
+                            .exclude(type = ParrentTransaction.TypeChoices.BURN_TRANSACTION)
+                            .exclude(type = ParrentTransaction.TypeChoices.PPOB_TRANSACTION)
+                            .annotate(
+                                is_transfer_to_special_recipient = models.Exists(
+                                    TransferUser.objects
+                                        .annotate(
+                                            transaction_type = models.ExpressionWrapper(models.OuterRef('type'), output_field = models.SmallIntegerField())
+                                        )
+                                        .annotate(
+                                            pk_string = models.functions.Cast(
+                                                models.F('pk'),
+                                                output_field = models.CharField()
+                                            )
+                                        )
+                                        .filter(pk_string = models.OuterRef('child_transaction_id'))
+                                        .filter(transaction_type = ParrentTransaction.TypeChoices.TRANSFER_TRANSACTION)
+                                        .filter(to_customer__special_recipient = True)[:1]
+                                )
+                            )
+                            .exclude(
+                                is_transfer_to_special_recipient = True
+                            )
+                            .filter(amount__lt = 0)
+                            .annotate(kasep = models.functions.Abs('amount'))
+                            .filter(time__gte = day_now)
+                            .values('customer')
+                            .annotate(total_amount = models.Sum('kasep'))
+                            .values('total_amount'),
+                    ),
+                    0,
+                ),
+                output_field = models.BigIntegerField()
             )
         ).annotate(
-            limit_with_extra_limit = models.F('limit_per_day') + models.functions.Coalesce(
-                models.Subquery(
-                    TransferUser.objects
-                    .filter(to_customer = models.OuterRef('pk'))
-                    .today()
-                    .values('to_customer')
-                    .annotate(kasep = models.Sum('amount'))
-                    .values("kasep")
+            limit = models.Case(
+                models.When(
+                    ~models.Q(type = Customer.TypeChoices.USER),
+                    then = models.Value(0)
                 ),
-                0
+                default = models.F('limit_per_day') + models.functions.Coalesce(
+                    models.Subquery(
+                        TransferUser.objects
+                            .filter(to_customer = models.OuterRef('pk'))
+                            .today()
+                            .values('to_customer')
+                            .annotate(sum_amount = models.Sum('amount'))
+                            .values('sum_amount')
+                    ),
+                    0
+                ),
+                output_field = models.BigIntegerField()
             )
         ).annotate(
             nfc_id_lower = models.functions.Lower("nfc_id")
@@ -136,7 +148,7 @@ class Customer(models.Model):
     limit_per_day = models.PositiveBigIntegerField(default = 20000, verbose_name = 'Limit Per Hari')
     type = models.PositiveSmallIntegerField(choices = TypeChoices.choices, default = TypeChoices.USER)
     pay_daily = models.BooleanField(default = True, verbose_name = 'Bayar Listrik?')
-    special_recipient = models.BooleanField(default = False, verbose_name = 'Penerima spesial', help_text = 'Saat customer lain mengirim maka si pengirim tidak akan berlaku limit')
+    special_recipient = models.BooleanField(default = False, verbose_name = 'Penerima Spesial?', help_text = 'Saat customer lain mengirim maka si pengirim tidak akan berlaku limit')
     nfc_id = models.CharField(max_length = 50, validators = [
         RegexValidator(regex = r'^[a-fA-F0-9]+$', message = 'Format nfc id tidak valid')
     ], null = True, blank = True)
@@ -157,7 +169,7 @@ class Transaction(ChildTransactionModel):
     amount = models.PositiveBigIntegerField(verbose_name = 'Total')
 
     @staticmethod
-    def get_child_alias():
+    def get_model_type():
         return ParrentTransaction.TypeChoices.MERCHANT_TRANSACTION
 
     def get_from_name(self):
@@ -193,7 +205,7 @@ class PPOBTransaction(ChildTransactionModel):
         SUCCESS = 3, "SUKSES"
 
     @staticmethod
-    def get_child_alias():
+    def get_model_type():
         return ParrentTransaction.TypeChoices.PPOB_TRANSACTION
 
     id = models.CharField(max_length = 12, primary_key = True, default = get_random_string)
@@ -275,9 +287,11 @@ class TransactionIn(models.Model):
 class TransferUser(ChildTransactionModel):
     class Meta:
         verbose_name = verbose_name_plural = "Transaksi User"
+        # validasi penerima dan pengirim ada di forms.py
+        # tidak bisa menggunakan constraint karena tidak support query foreign key
 
     @staticmethod
-    def get_child_alias():
+    def get_model_type():
         return ParrentTransaction.TypeChoices.TRANSFER_TRANSACTION
 
     from_customer = models.ForeignKey(Customer, on_delete = models.PROTECT, related_name = 'skasep', verbose_name = 'Dari Customer')
@@ -293,7 +307,7 @@ class Deposit(ChildTransactionModel):
         verbose_name = verbose_name_plural = "Deposit"
 
     @staticmethod
-    def get_child_alias():
+    def get_model_type():
         return ParrentTransaction.TypeChoices.DEPOSIT_TRANSACTION
 
     customer = models.ForeignKey(Customer, on_delete = models.PROTECT) 
@@ -338,10 +352,10 @@ class PPOBProductManager(models.Manager):
         return super().get_queryset().annotate(
             safe_enable = models.Exists(
                 PPOBProductWrapper.objects
-                .annotate(parrent_enable = models.ExpressionWrapper(models.OuterRef('enable'), output_field = models.BooleanField()))
-                .filter(parrent_enable = True)
-                .filter(enable = True)
-                .filter(pk = models.OuterRef('wrapper'))[:1]
+                    .annotate(parrent_enable = models.ExpressionWrapper(models.OuterRef('enable'), output_field = models.BooleanField()))
+                    .filter(parrent_enable = True)
+                    .filter(enable = True)
+                    .filter(pk = models.OuterRef('wrapper'))[:1]
             ),
         ).annotate(
             full_name = models.functions.Concat(
