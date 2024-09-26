@@ -196,9 +196,9 @@ CACHEOPS_DEFAULTS = {
 }
 
 CACHEOPS = {
-    'main.*':  {'ops': 'all'},
-    'auth.user':  {'ops': 'all'},
-    'auth.group':  {'ops': 'all'},
+    # 'main.*':  {'ops': 'all'},
+    # 'auth.user':  {'ops': 'all'},
+    # 'auth.group':  {'ops': 'all'},
 }
 
 PUBLIC_CONTEXT = {
