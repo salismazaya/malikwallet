@@ -2,6 +2,7 @@ from django.urls import path, include, re_path
 from main import views
 
 urlpatterns = [
+    path('offline/', views.offline),
     path('', include('pwa.urls')),
     path('', views.index, name = 'index'),
     re_path(r'^supersecret/hooks/digiflazz/?$', views.pulsa_webhook, name = 'pulsa_webhook'),

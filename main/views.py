@@ -615,3 +615,8 @@ def backup(request: HttpRequest):
         'timestamp': int(time.time()),
         'data': data_encrypted
     })
+
+def offline(request: HttpRequest):
+    response = render(request, 'main/offline.html')
+    response.status_code = 503
+    return response

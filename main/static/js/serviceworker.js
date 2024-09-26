@@ -10,6 +10,8 @@ var filesToCache = [
     '/static/js/flowbite.min.js',
     '/static/js/sweetalert2.js',
     '/static/js/push-notifications-cdn.js',
+    '/static/images/logo.jpg',
+    '/static/images/splash.jpg',
     '/static/images/icons/icon-72x72.png',
     '/static/images/icons/icon-96x96.png',
     '/static/images/icons/icon-128x128.png',
@@ -41,13 +43,6 @@ self.addEventListener("install", async (event) => {
     )
 });
 
-
-self.addEventListener('sync', async (event) => {
-    console.log(event)
-    if (event.tag === 'kase1') {
-        kase1();
-    }
-})
 
 // Clear cache on activate
 self.addEventListener('activate', async (event) => {
@@ -82,22 +77,3 @@ self.addEventListener('notificationclick', function (event) {
         clients.openWindow('/')
     );
 });
-
-// setTimeout(async () => {
-//     var pusher = new Pusher('871a1d438b0bb82d702f', {
-//         cluster: 'ap1'
-//     });
-//     console.log(pusher);
-//     const response = await fetch('/pk/');
-//     const pk = await response.text()
-
-//     var channel = pusher.subscribe(`keren_${pk}`);
-//     channel.bind('moneyin', async function (data) {
-//         console.log(data);
-//         const { name, amount } = data;
-//         // document.querySelector('.ohhh').innerHTML = name;
-//         self.registration.showNotification("UANG MASUK", {
-//             body: `Uang masuk sebesar Rp. ${amount} dari ${name}`,
-//         });
-//     });
-// }, 0)
